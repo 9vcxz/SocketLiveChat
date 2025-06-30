@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-8">
+        <div class="card">
+            <p class="text-center h3 my-2">Chatroom {{ room_id }}</p>
+        </div>
+        {#<div class="card my-2" style="overflow-y: scroll; height: 480px;">#}
+        <div class="card my-2 d-flex flex-column-reverse overflow-auto" style="height: 480px;">
+            <div id="room-messages"></div>
+        </div>
+        <div class="row">
+            <div class="col my-2">
+                <div class="input-group mb">
+                    <input type="text" class="form-control" id="message" placeholder="Message">
+                    <button class="btn btn-outline-primary" type="button" name="send-message" onclick="sendMessage()">Send</button>
+                    <button class="btn btn-outline-danger" type="button" name="disconnect" onclick="clientDisconnect()">Disconnect</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    var socketio = io();
+    const messages = document.getElementById("room-messages")
+
+    socketio.on("new_user_announcement", data => {
+        console.log(data.nickname)
+        console.log(data.message)
+        console.log(data.date)
+        createInfoMessage(data.nickname, data.message, data.date);
+    });
+    
+    const createInfoMessage = (nickname, message, date) => {
+        const content = `
+        <p class="text-muted fst-italic text-center">
+            <strong>${nickname}</strong> ${message} ${date}
+        </p>
+        `;
+        messages.innerHTML += content;
+    };
+    
+    socketio.on("message", data => {
+        createChatMessage(data.nickname, data.message , data.date);
+    });
+
+    const createChatMessage = (nickname, message, date) => {
+        const content = `
+        <div class="d-flex justify-content-between mx-4">
+            <div class="p-2">
+                <p class="fw-bold text-nowrap">${nickname}&nbsp;:</p>
+            </div>
+            <div class="p-2 flex-grow-1" style="max-width: 65%;">
+                <p class="text-wrap">${message}</p>
+            </div>
+            <div class="p-2 ml-auto" style="width: 160px;">
+                <p class="fw-light text-nowrap">${date}</p>
+            </div>
+        </div>
+        `;
+        messages.innerHTML += content;
+    };
+
+    const sendMessage = () => {
+        const message = document.getElementById("message");
+        if (message.value == "") return;
+        socketio.emit("message", {msg: message.value});
+        message.value = "";
+    };
+
+    const clientDisconnect = () => {
+        socketio.disconnect();
+        location = "../";
+    };
+
+    socketio.on("user_dc_announcement", data => {
+        createInfoMessage(data.nickname, data.message, data.date);
+    });
+
+</script>
+{% for msg in messages %}
+<script type="text/javascript">
+    createMessage("{{msg.name}}", "{{msg.message}}", "{{ msg.date }}");
+</script>
+{% endfor %}
+{% endblock content %}
