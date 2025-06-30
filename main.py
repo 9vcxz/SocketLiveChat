@@ -9,6 +9,7 @@ app.config['SECRET_KEY'] = 'SECRETKEY'
 socketio = SocketIO(app)
 
 rooms = {}
+connected_users = {}
 
 def generate_unique_room_id(numbers):
     while True:
@@ -18,6 +19,18 @@ def generate_unique_room_id(numbers):
         if room_id not in rooms:
             break
     return room_id
+
+def is_nickname_unique(nickname):
+    if not connected_users:
+        return True
+    
+    for sid in connected_users:
+        temp_name = connected_users[sid]['nickname']
+        if nickname == temp_name:
+            return False
+        
+    return True
+
 
 @app.route("/", methods=["GET", "POST"])
 def landing_page():
@@ -34,8 +47,9 @@ def landing_page():
                 "landing_page.html", 
                 error="Your nickname must contain some characters.",
             )
-        # elif nickname in nicknames:
-        #     return render_template("landing_page.html", error=f"Nickname: '{nickname}' is already taken, try something else.")
+        
+        if not is_nickname_unique(nickname):
+            return render_template("landing_page.html", error=f"Nickname: '{nickname}' is already taken, try something else.")
 
         if join_room is not False and not room_id:
             return render_template(
@@ -96,6 +110,9 @@ def connect():
     if nickname not in rooms[room_id]["users"]:
         rooms[room_id]["users"].append(nickname)
 
+    connected_users.update({request.sid: {"nickname": nickname, "room_id": room_id}})
+    print(f'Connected users: {connected_users}')
+
     join_announcement = {
         "nickname": nickname,
         "message": "has entered the room",
@@ -132,6 +149,8 @@ def disconnect():
     }
     emit("user_dc_announcement", dc_announcement, to=room_id)
     print(f"User {session.get('nickname')} has left room: {room_id}")
+
+    del connected_users[request.sid]
 
     if room_id in rooms:
         rooms[room_id]["users"].remove(nickname)
