@@ -15,7 +15,7 @@ def generate_unique_room_id(numbers):
     while True:
         room_id = ""
         for _ in range(numbers):
-            room_id += str(random.randint(0, 10))
+            room_id += str(random.randint(0, 9))
         if room_id not in rooms:
             break
     return room_id
@@ -118,6 +118,7 @@ def connect():
         "message": "has entered the room",
         "date": datetime.today().strftime("%Y-%m-%d %H:%M:%S")
     }
+    emit("load_existing_messages", rooms[room_id]['messages'], to=request.sid)
     emit("new_user_announcement", join_announcement, to=room_id)
     print(f"User {nickname} joined room: {room_id}")
 
